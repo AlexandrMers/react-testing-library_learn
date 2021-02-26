@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import Search from "./Search";
 
 function App() {
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState("test display text value");
 
   const handleChange = ({ target: { value } }) => {
     setSearch(value);
