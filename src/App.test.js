@@ -1,11 +1,28 @@
-import { render } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 
 import App from "./App";
 
-test("renders learn react link", () => {
-  const { asFragment, getByText } = render(<App />);
-  const resultText = getByText(/Search:/i);
+describe("App", () => {
+  it("render app component", () => {
+    render(<App />);
+  });
 
-  expect(asFragment(<App />)).toMatchSnapshot();
-  expect(resultText).toBeInTheDocument();
+  it("correct change input value", () => {
+    render(<App />);
+
+    const INITIAL_VALUE = "";
+    const CHANGED_VALUE = "changed value";
+
+    const inputElem = screen.getByPlaceholderText("search");
+    expect(inputElem).toHaveValue(INITIAL_VALUE);
+    fireEvent.change(inputElem, {
+      target: {
+        value: CHANGED_VALUE,
+      },
+    });
+    expect(inputElem).toHaveValue(CHANGED_VALUE);
+    expect(
+      screen.getByText(`Searches for ${CHANGED_VALUE}`)
+    ).toBeInTheDocument();
+  });
 });
