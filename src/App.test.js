@@ -1,64 +1,71 @@
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import axios from "axios";
+import { act, render } from "@testing-library/react";
 
 import App from "./App";
+import userEvent from "@testing-library/user-event";
+
+jest.mock("axios");
+
+const HITS = [
+  {
+    objectID: "1",
+    title: "Angular",
+  },
+  {
+    objectID: "2",
+    title: "React",
+  },
+];
+
+const URL = "http://hn.algolia.com/api/v1/search?query=React";
 
 describe("App", () => {
-  it("render app component", () => {
-    render(<App />);
-  });
-
-  it("correct change input value", () => {
-    render(<App />);
-
-    const INITIAL_VALUE = "";
-    const CHANGED_VALUE = "changed value";
-
-    const inputElem = screen.getByPlaceholderText("search");
-    expect(inputElem).toHaveValue(INITIAL_VALUE);
-
-    userEvent.type(inputElem, CHANGED_VALUE);
-    // });
-    expect(inputElem).toHaveValue(CHANGED_VALUE);
-    expect(
-      screen.getByText(`Searches for ${CHANGED_VALUE}`)
-    ).toBeInTheDocument();
-  });
-
-  it("check focus", () => {
-    const { getAllByTestId } = render(
-      <div>
-        <input type="text" data-testid="element" />
-        <input type="radio" data-testid="element" />
-        <input type="number" data-testid="element" />
-      </div>
-    );
-    const [text, radio, number] = getAllByTestId("element");
-
-    userEvent.tab(text);
-    expect(text).toHaveFocus();
-
-    userEvent.tab(radio);
-    expect(radio).toHaveFocus();
-
-    userEvent.tab(number);
-    expect(number).toHaveFocus();
-  });
-
-  it("select options", () => {
-    const { getByRole, getByText } = render(
-      <select>
-        <option value="1">A</option>
-        <option value="2">B</option>
-        <option value="3">C</option>
-      </select>
+  it("fetches news from an API", async () => {
+    axios.get.mockImplementationOnce(() =>
+      Promise.resolve({
+        data: { hits: HITS },
+      })
     );
 
-    userEvent.selectOptions(getByRole("combobox"), "1");
-    expect(getByText("A").selected).toBeTruthy();
+    const { getByRole, findAllByRole } = render(<App />);
+    userEvent.click(getByRole("button"));
 
-    userEvent.selectOptions(getByRole("combobox"), "2");
-    expect(getByText("B").selected).toBeTruthy();
-    expect(getByText("C").selected).toBeFalsy();
+    const items = await findAllByRole("listitem");
+    expect(items).toHaveLength(2);
+
+    expect(axios.get).toHaveBeenCalledTimes(1);
+    expect(axios.get).toHaveBeenCalledWith(URL);
+  });
+
+  it("fetches news from an API and rejected", async () => {
+    axios.get.mockImplementationOnce(() => Promise.reject(new Error()));
+
+    const { getByRole, findByText } = render(<App />);
+    userEvent.click(getByRole("button"));
+
+    const message = await findByText(/Something went wrong/i);
+
+    expect(message).toBeInTheDocument();
+
+    expect(axios.get).toHaveBeenCalledTimes(1);
+    expect(axios.get).toHaveBeenCalledWith(URL);
+  });
+
+  it("fetches news from an API with act", async () => {
+    const promise = Promise.resolve({
+      data: { hits: HITS },
+    });
+
+    axios.get.mockImplementationOnce(() => promise);
+
+    const { getByRole, getAllByRole } = render(<App />);
+    userEvent.click(getByRole("button"));
+    await act(() => promise);
+
+    const items = getAllByRole("listitem");
+    expect(items).toHaveLength(2);
+
+    expect(axios.get).toHaveBeenCalledTimes(1);
+    expect(axios.get).toHaveBeenCalledWith(URL);
   });
 });
